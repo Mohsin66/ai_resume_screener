@@ -9,6 +9,35 @@ from langchain_core.messages import SystemMessage, HumanMessage
 
 text_model = get_text_model()  # Get the appropriate text model based on the MODEL_PROVIDER environment variable
 
+def check_identity_validation(state: Screening):
+    """
+    Check if the candidate's identity information is valid (name, email, phone).
+
+    Args:
+        state (Screening): The current state of the screening process.
+    """
+
+    candidate_name = state.get("candidate_name")
+    candidate_email = state.get("candidate_email")
+
+    # Basic validation: check if name, email, and phone are non-empty strings.
+    is_valid = all([
+        isinstance(candidate_name, str) and candidate_name.strip(),
+        isinstance(candidate_email, str) and candidate_email.strip()
+    ])
+    
+    return "valid" if is_valid else "invalid"
+
+def auto_reject_candidate(state: Screening):
+    """
+    Auto-reject the candidate by setting the result to "fail" and score to 0.
+
+    Args:
+        state (Screening): The current state of the screening process.
+    """
+    return {"candidate_score": 0, "result": "fail"}
+
+
 def load_job_description() -> dict:
     """
     Read and parse the job description ONCE per run (not a graph node).

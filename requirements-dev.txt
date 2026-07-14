@@ -1,0 +1,9 @@
+# Development / testing dependencies.
+# These are NOT needed to run the app — only to run the test suite.
+# Keeping them separate from requirements.txt is standard practice: production
+# installs stay lean, and dev tooling is opt-in.
+#
+#   pip install -r requirements-dev.txt
+
+pytest==9.1.1
+pytest-cov==7.1.0

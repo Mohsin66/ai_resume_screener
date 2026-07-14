@@ -11,6 +11,11 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 
+# Testing artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
 # Generated output
 reports/*.csv
 logs/*

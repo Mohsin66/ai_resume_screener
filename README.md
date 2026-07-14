@@ -531,24 +531,40 @@ To make this README even more compelling on GitHub, add the following visuals (t
 - [x] **Hosted-provider support** — switch to any OpenAI-compatible provider via `MODEL_PROVIDER=openai`
 - [ ] **Concurrent/async batch processing** for large candidate pools
 - [ ] **Structured logging** into the reserved `logs/` directory
-- [ ] **Automated test suite** and CI
+- [x] **Automated test suite** (pytest — see [`tests/`](tests/)) · [ ] CI (GitHub Actions) still pending
 - [ ] **Dockerfile** for one-command reproducible runs
 
 ---
 
 ## 🧪 Testing
 
-> [!NOTE]
-> There is **no automated test suite yet** (see the [roadmap](#-roadmap)). The project ships with sample data for manual verification.
-
-Manual smoke test:
+The project has a **pytest unit-test suite** under [`tests/`](tests/), with a full
+learning-oriented walkthrough in [tests/README.md](tests/README.md). Test-only
+dependencies are pinned separately in [`requirements-dev.txt`](requirements-dev.txt).
 
 ```bash
-# The repo includes a sample job description and sample résumés.
-python main.py
-# Confirm: résumés move into shortlisted/ or rejected/,
-# and reports/screening_results.csv gains one row per candidate.
+# Install test tooling (once)
+pip install -r requirements-dev.txt
+
+# Run the suite (fast, no LLM required — the model is mocked)
+pytest
+
+# With a coverage report
+pytest --cov=agents --cov=workflows --cov=config --cov-report=term-missing
 ```
+
+What's covered:
+
+| Area | File | Technique |
+|------|------|-----------|
+| Conditional routing (identity check + auto-reject) | `tests/test_routing.py` | pure unit tests, `@parametrize` |
+| Score clamping + pass/fail threshold | `tests/test_score_candidate.py` | **mocking** the LLM via `monkeypatch` |
+| CSV report + file routing | `tests/test_compile_results.py` | `tmp_path`, side-effect assertions |
+
+> [!NOTE]
+> The unit tests **mock the LLM**, so they're fast and deterministic and need no
+> Ollama. The live model path is verified separately by an end-to-end run
+> (`python main.py`) against the sample résumés.
 
 ---
 
