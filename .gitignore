@@ -1,0 +1,26 @@
+# Secrets / environment
+.env
+
+# Virtual environment
+env/
+venv/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Generated output
+reports/*.csv
+logs/*
+
+# Screened resumes get moved into these at runtime
+shortlisted/*
+rejected/*
+
+# Keep the folders in git, ignore their contents
+!shortlisted/.gitkeep
+!rejected/.gitkeep
+!reports/.gitkeep
+!logs/.gitkeep

@@ -1,0 +1,29 @@
+Senior Backend Engineer (Python)
+
+About the role
+We are hiring a Senior Backend Engineer to design and scale the APIs behind our
+B2B analytics platform. You will own services end to end, mentor mid-level
+engineers, and drive technical decisions across the backend team. This is a
+hybrid role based in Berlin (3 days on-site).
+
+Responsibilities
+- Design, build, and operate RESTful and async APIs in Python.
+- Model and optimize data in PostgreSQL; own schema and query performance.
+- Containerize services with Docker and deploy on AWS (ECS/EKS).
+- Build CI/CD pipelines and improve observability and reliability.
+- Mentor engineers and lead code reviews and design discussions.
+
+Requirements (mandatory)
+- 5+ years of professional backend development experience.
+- Strong Python and at least one modern web framework (FastAPI or Django).
+- Solid experience with PostgreSQL and SQL performance tuning.
+- Hands-on AWS experience and Docker in production.
+- Bachelor's degree in Computer Science or equivalent practical experience.
+- Must be eligible to work in the EU.
+
+Nice to have
+- Kubernetes, Terraform, or other IaC tools.
+- Experience with event-driven systems (Kafka, RabbitMQ).
+- Prior experience mentoring or leading a small team.
+
+We offer competitive salary, equity, learning budget, and flexible hours.
