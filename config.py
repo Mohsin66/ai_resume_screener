@@ -50,6 +50,8 @@ RESUME_PROMPT_FILE = _path("RESUME_PROMPT_FILE", "prompts/extract_resume_data.tx
 SCORE_PROMPT_FILE = _path("SCORE_PROMPT_FILE", "prompts/score_candidate.txt")
 
 # ---- LLM settings ----
+MODEL_PROVIDER = os.getenv("MODEL_PROVIDER", "ollama").lower()
+
 LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "llama3.2:3b")
 LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.2"))
 

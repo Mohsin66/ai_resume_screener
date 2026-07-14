@@ -3,10 +3,11 @@ import csv
 import shutil
 import config
 from workflows.state import Screening
-from agents.models import ollama_text_model
+from agents.models import get_text_model
 from agents.schemas import Result_Structure, JobDescription_Structure, CandidateInfo_Structure
 from langchain_core.messages import SystemMessage, HumanMessage
 
+text_model = get_text_model()  # Get the appropriate text model based on the MODEL_PROVIDER environment variable
 
 def load_job_description() -> dict:
     """
@@ -30,7 +31,7 @@ def load_job_description() -> dict:
     with open(config.JD_PROMPT_FILE, 'r') as file:
         prompt_job_description = file.read()
 
-    structured_model = ollama_text_model.with_structured_output(JobDescription_Structure)
+    structured_model = text_model.with_structured_output(JobDescription_Structure)
     data = structured_model.invoke([
         SystemMessage(content=prompt_job_description),
         HumanMessage(content=job_file_description),
@@ -61,7 +62,7 @@ def extract_resume_text(state: Screening):
     with open(config.RESUME_PROMPT_FILE, 'r') as file:
         prompt_extract_resume_text = file.read()
 
-    structured_model = ollama_text_model.with_structured_output(CandidateInfo_Structure)
+    structured_model = text_model.with_structured_output(CandidateInfo_Structure)
     data = structured_model.invoke([
         SystemMessage(content=prompt_extract_resume_text),
         HumanMessage(content=resume_text),
@@ -110,7 +111,7 @@ def score_candidate(state: Screening):
         HumanMessage(content=f"Candidate Info:\n{candidate_info}\n\nJob Description:\n{job_description}"),
     ]
 
-    structured_model = ollama_text_model.with_structured_output(Result_Structure)
+    structured_model = text_model.with_structured_output(Result_Structure)
     result_data = structured_model.invoke(prompt)
 
     # Coerce the score to a safe int (small models may return None or a string).

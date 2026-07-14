@@ -64,7 +64,7 @@ Drop a job description and a folder of résumés into the project, run one comma
 5. **File** each résumé into `shortlisted/` or `rejected/` and append the result to a **CSV report**.
 
 > [!IMPORTANT]
-> The entire pipeline runs **100% locally on Ollama** — no résumé data ever leaves your machine, and there are **no per-token API costs**. This makes it well-suited for handling sensitive candidate PII under GDPR-style constraints.
+> By default the entire pipeline runs **100% locally on Ollama** — no résumé data ever leaves your machine, and there are **no per-token API costs**. This makes it well-suited for handling sensitive candidate PII under GDPR-style constraints. If you need a stronger model, a single `MODEL_PROVIDER=openai` switch routes the same graph through any hosted OpenAI-compatible endpoint (note: in that mode, résumé text is sent to the external provider).
 
 ### Who is this for?
 
@@ -98,7 +98,7 @@ Drop a job description and a folder of résumés into the project, run one comma
 - ✔ **Defensive parsing** — safe defaults and score clamping guard against small-model quirks
 - ✔ **Automatic file routing** — résumés are physically moved into `shortlisted/` or `rejected/`
 - ✔ **CSV audit trail** — one appendable row per candidate for downstream reporting
-- ✔ **Provider-flexible** — points at any OpenAI-compatible endpoint via `.env` (Ollama's local server by default)
+- ✔ **Pluggable LLM provider** — a single `MODEL_PROVIDER` env var switches the whole pipeline between local **Ollama** and any hosted **OpenAI-compatible** endpoint, no code changes required
 
 ---
 
@@ -146,7 +146,7 @@ The system is a **local, single-process batch application**. A thin runner (`mai
 | **Graph definition** | `workflows/graph.py` | Wires the three nodes into a linear `StateGraph` and compiles it into `app` |
 | **Shared state** | `workflows/state.py` | `Screening` `TypedDict` — the contract every node reads/writes |
 | **Agent nodes** | `agents/nodes.py` | The four functions: `load_job_description`, `extract_resume_text`, `score_candidate`, `compile_results` |
-| **LLM binding** | `agents/models.py` | Instantiates `ChatOllama` from config |
+| **LLM binding** | `agents/models.py` | Instantiates the provider's chat model (`ChatOllama` or `ChatOpenAI`) and exposes `get_text_model()`, which the nodes call to pick the provider from config |
 | **Output schemas** | `agents/schemas.py` | Typed structures that constrain each LLM response |
 | **Configuration** | `config.py` | Resolves all paths, model names, and thresholds from `.env` |
 | **Prompts** | `prompts/*.txt` | Role-specific system prompts for each LLM stage |
@@ -246,14 +246,15 @@ ai_resume_screener/
 | **Language** | Python 3.12+ |
 | **Agent Orchestration** | [LangGraph](https://langchain-ai.github.io/langgraph/) `1.2` |
 | **LLM Framework** | [LangChain](https://python.langchain.com/) `1.3` (`langchain-core`) |
-| **LLM Runtime** | [Ollama](https://ollama.com/) (local) via `langchain-ollama` |
+| **LLM Runtime** | [Ollama](https://ollama.com/) (local, default) via `langchain-ollama` **or** any OpenAI-compatible provider via `langchain-openai` |
+| **Provider Switch** | `MODEL_PROVIDER` env var (`ollama` \| `openai`) |
 | **Default Model** | `llama3.2:3b` (configurable) |
 | **Data Validation** | Pydantic 2 / `TypedDict` structured output |
 | **Config** | `python-dotenv` |
 | **Output** | CSV (Python stdlib `csv`) + filesystem routing |
 
 > [!NOTE]
-> `requirements.txt` also pins `langchain-openai`, `boto3`, and `openai`. The active pipeline uses **only Ollama** (`agents/models.py`), but the `.env` is structured around an OpenAI-compatible base URL, so swapping in a hosted OpenAI-compatible provider is a small change. These extra packages are not exercised by the current graph.
+> The pipeline is provider-agnostic. `agents/models.py` builds both a `ChatOllama` and a `ChatOpenAI` instance and exposes `get_text_model()`, which returns the one selected by `MODEL_PROVIDER`. Set it to `ollama` (default) to run fully offline, or `openai` to route the same graph through a hosted OpenAI-compatible endpoint (`OPENAI_BASE_URL` / `OPENAI_API_KEY` / `OPENAI_MODEL_NAME`). `requirements.txt` also pins `boto3`, which is not exercised by the current graph.
 
 ---
 
@@ -323,10 +324,11 @@ All configuration is loaded from `.env` (see `config.py`). Copy `.env.example` �
 
 | Variable | Required | Purpose | Example / Default |
 |---|:---:|---|---|
-| `OPENAI_API_KEY` | ❌ | API key if using a hosted OpenAI-compatible provider (unused with local Ollama) | *(empty)* |
+| `MODEL_PROVIDER` | ❌ | Selects the LLM provider: `ollama` (local) or `openai` (hosted / OpenAI-compatible) | `ollama` |
+| `OPENAI_API_KEY` | ⚠️ | API key for the hosted provider — **required when `MODEL_PROVIDER=openai`**; unused with Ollama | *(empty)* |
 | `OPENAI_BASE_URL` | ❌ | OpenAI-compatible endpoint | `http://localhost:11434/v1` |
-| `LLM_MODEL_NAME` | ✅ | Ollama model used by the graph | `llama3.2:3b` |
-| `OPENAI_MODEL_NAME` | ❌ | Model name for a hosted provider | `gpt-4o-mini` |
+| `OPENAI_MODEL_NAME` | ⚠️ | Model used when `MODEL_PROVIDER=openai` | `gpt-4o-mini` |
+| `LLM_MODEL_NAME` | ✅ | Ollama model used when `MODEL_PROVIDER=ollama` | `llama3.2:3b` |
 | `LLM_TEMPERATURE` | ❌ | Sampling temperature (low = deterministic) | `0.2` |
 | `LLM_MAX_TOKENS` | ❌ | Max generation tokens | `2000` |
 | `LLM_REQUEST_TIMEOUT` | ❌ | Per-request timeout (seconds) | `120` |
@@ -360,11 +362,22 @@ python main.py
 
 **Adjust strictness** — raise or lower `PASS_SCORE_THRESHOLD` in `.env` (e.g. `70` for a tighter shortlist).
 
-**Use a stronger model** — pull it with Ollama and set `LLM_MODEL_NAME` (e.g. `llama3.1:8b`):
+**Use a stronger local model** — pull it with Ollama and set `LLM_MODEL_NAME` (e.g. `llama3.1:8b`):
 
 ```bash
 ollama pull llama3.1:8b
 # .env → LLM_MODEL_NAME=llama3.1:8b
+python main.py
+```
+
+**Run on a hosted OpenAI-compatible provider instead of local Ollama** — flip `MODEL_PROVIDER` and supply the hosted credentials:
+
+```bash
+# .env
+MODEL_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_MODEL_NAME=gpt-4o-mini
 python main.py
 ```
 
@@ -482,7 +495,7 @@ Files are **moved** with `shutil.move` (works across filesystems); a stale copy 
 
 | Area | Implementation |
 |---|---|
-| **Data privacy** | Fully offline inference — candidate PII never leaves the local machine |
+| **Data privacy** | Fully offline inference in the default `ollama` mode — candidate PII never leaves the local machine (switching to `MODEL_PROVIDER=openai` sends résumé text to the hosted provider) |
 | **Secrets management** | All secrets/config in `.env`, which is `.gitignore`d; only `.env.example` is committed |
 | **No hardcoded config** | Every path, model, and threshold is resolved from environment variables via `config.py` |
 | **Input isolation** | Résumés are read as text and passed to the model; no code from résumés is executed |
@@ -515,7 +528,7 @@ To make this README even more compelling on GitHub, add the following visuals (t
 - [ ] **Web UI / REST API** (e.g. FastAPI) for non-technical recruiters
 - [ ] **Database persistence** (e.g. PostgreSQL) to replace CSV + folders
 - [ ] **Per-candidate scoring rationale** (explainable "why this score")
-- [ ] **Hosted-provider support** (wire up the already-present OpenAI-compatible config)
+- [x] **Hosted-provider support** — switch to any OpenAI-compatible provider via `MODEL_PROVIDER=openai`
 - [ ] **Concurrent/async batch processing** for large candidate pools
 - [ ] **Structured logging** into the reserved `logs/` directory
 - [ ] **Automated test suite** and CI
